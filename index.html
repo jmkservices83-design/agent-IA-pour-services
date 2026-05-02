@@ -534,10 +534,21 @@ function updateStats() {
 }
 
 // ── DÉMARRAGE ──
-window.onload = function() {
-  // Petit délai pour être sûr que tout le DOM est prêt
-  setTimeout(function(){ init(); }, 100);
-};
+<script>
+
+// Vérifie que tout est bien chargé
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("✅ DOM chargé");
+
+  try {
+    init();
+    console.log("✅ INIT OK");
+  } catch (e) {
+    console.error("❌ Erreur INIT :", e);
+
+    // Sécurité : afficher quand même l'app
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+  }
+});
 </script>
-</body>
-</html>
