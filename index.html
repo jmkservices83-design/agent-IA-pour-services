@@ -5,558 +5,83 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent IA Pro</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
-
-  /* ÉCRAN DE CHARGEMENT visible immédiatement */
-  #loading {
-    position: fixed; inset: 0; background: #0d1117;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 16px; z-index: 999;
-  }
-  .spinner {
-    width: 48px; height: 48px; border: 4px solid #1c2333;
-    border-top-color: #7c6af7; border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading p { font-size: 14px; color: #8b949e; }
-
-  /* APP */
-  #app { display: none; flex-direction: column; min-height: 100vh; }
-  .topbar { background: #161b22; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
-  .logo { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #7c6af7, #22d3a5); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-  .biz-name { font-size: 15px; font-weight: 700; }
-  .biz-type { font-size: 11px; color: #8b949e; margin-top: 2px; }
-  .online { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #22d3a5; margin-left: auto; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: #22d3a5; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-  /* TABS */
-  .tabs { display: flex; background: #161b22; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 11px; color: #484f58; cursor: pointer; border: none; background: none; color: #8b949e; transition: color .2s; position: relative; }
-  .tab.active { color: #7c6af7; }
-  .tab.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; background: #7c6af7; border-radius: 2px; }
-
-  /* PAGES */
-  .page { display: none; flex: 1; flex-direction: column; }
-  .page.active { display: flex; }
-  .scroll { overflow-y: auto; flex: 1; padding: 16px; }
-
-  /* CHAT */
-  .ch-bar { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); overflow-x: auto; }
-  .ch-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: #8b949e; font-size: 12px; cursor: pointer; white-space: nowrap; }
-  .ch-btn.active { background: rgba(124,106,247,.2); color: #7c6af7; border-color: #7c6af7; }
-  .messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-  .msg { display: flex; flex-direction: column; max-width: 84%; }
-  .msg.user { align-self: flex-end; align-items: flex-end; }
-  .msg.agent { align-self: flex-start; }
-  .bubble { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5; }
-  .user .bubble { background: #7c6af7; color: #fff; border-bottom-right-radius: 4px; }
-  .agent .bubble { background: #1c2333; border: 1px solid rgba(255,255,255,0.08); border-bottom-left-radius: 4px; }
-  .mtime { font-size: 10px; color: #484f58; padding: 2px 4px; }
-  .typing { display: none; padding: 10px 14px; background: #1c2333; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; border-bottom-left-radius: 4px; align-self: flex-start; }
-  .typing.show { display: flex; gap: 4px; align-items: center; }
-  .typing span { width: 5px; height: 5px; border-radius: 50%; background: #8b949e; animation: bounce .9s infinite; }
-  .typing span:nth-child(2){animation-delay:.15s} .typing span:nth-child(3){animation-delay:.3s}
-  @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
-  .input-area { display: flex; gap: 8px; padding: 10px 14px; padding-bottom: 14px; border-top: 1px solid rgba(255,255,255,0.08); background: #161b22; }
-  .msg-input { flex: 1; background: #1c2333; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 9px 14px; color: #e6edf3; font-size: 14px; outline: none; resize: none; }
-  .msg-input:focus { border-color: #7c6af7; }
-  .send-btn { width: 40px; height: 40px; border-radius: 50%; background: #7c6af7; border: none; color: #fff; cursor: pointer; font-size: 16px; flex-shrink: 0; }
-  .send-btn:disabled { opacity: .3; }
-  .prompts { display: flex; gap: 7px; padding: 8px 14px; overflow-x: auto; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .prompt { padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: #8b949e; font-size: 11px; cursor: pointer; white-space: nowrap; }
-
-  /* CARDS */
-  .card { background: #1c2333; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
-  .card-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
-  .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
-  .row:last-child { border: none; }
-  .row-val { color: #22d3a5; font-weight: 600; }
-  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-  .kpi { background: #1c2333; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; }
-  .kpi-val { font-size: 24px; font-weight: 800; }
-  .kpi-lbl { font-size: 11px; color: #8b949e; margin-top: 4px; }
-
-  /* SETTINGS */
-  label { font-size: 12px; color: #8b949e; display: block; margin-bottom: 5px; margin-top: 12px; }
-  label:first-child { margin-top: 0; }
-  input[type=text], input[type=password], textarea, select { width: 100%; background: #161b22; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #e6edf3; font-size: 14px; padding: 10px 12px; outline: none; -webkit-appearance: none; font-family: Arial; }
-  input:focus, textarea:focus, select:focus { border-color: #7c6af7; }
-  textarea { resize: none; height: 80px; line-height: 1.5; }
-  select option { background: #161b22; }
-  .btn { width: 100%; padding: 13px; border-radius: 8px; border: none; background: linear-gradient(135deg, #7c6af7, #22d3a5); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
-  .toast { display: none; text-align: center; color: #22d3a5; font-size: 13px; margin-top: 8px; }
-
-  /* API KEY NOTICE */
-  .api-notice { background: rgba(124,106,247,.1); border: 1px solid rgba(124,106,247,.3); border-radius: 10px; padding: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; }
-  .api-notice a { color: #22d3a5; }
-  .api-notice strong { color: #7c6af7; }
+body { font-family: Arial; background:#0d1117; color:white; margin:0 }
+#loading { position:fixed; inset:0; display:flex; justify-content:center; align-items:center; flex-direction:column }
+#app { display:none }
+button { padding:10px; border:none; border-radius:8px; background:#7c6af7; color:white; cursor:pointer }
+textarea { width:100%; padding:10px; border-radius:8px; margin-top:10px }
 </style>
 </head>
-<body>
 
-<!-- CHARGEMENT -->
+<body onload="forceStart()">
+
 <div id="loading">
-  <div class="spinner"></div>
   <p>Chargement de l'Agent IA...</p>
 </div>
 
-<!-- APPLICATION -->
 <div id="app">
-  <div class="topbar">
-    <div class="logo" id="biz-icon">🏪</div>
-    <div>
-      <div class="biz-name" id="biz-name">Mon Commerce</div>
-      <div class="biz-type" id="biz-type">Agent IA</div>
-    </div>
-    <div class="online"><div class="dot"></div> En ligne</div>
-  </div>
-
-  <!-- PAGE CHAT -->
-  <div class="page active" id="page-chat">
-    <div class="ch-bar">
-      <button class="ch-btn active" onclick="setCh('sms',this)">💬 SMS</button>
-      <button class="ch-btn" onclick="setCh('tel',this)">📞 Téléphone</button>
-      <button class="ch-btn" onclick="setCh('web',this)">🌐 Chat web</button>
-    </div>
-    <div class="prompts" id="prompts"></div>
-    <div class="messages" id="messages">
-      <div class="msg agent" id="welcome-msg">
-        <div class="bubble">👋 Bonjour ! Je suis votre agent IA. Simulez un message client en tapant ci-dessous, ou cliquez sur une suggestion.</div>
-        <div class="mtime">Agent IA</div>
-      </div>
-    </div>
-    <div class="typing" id="typing"><span></span><span></span><span></span></div>
-    <div class="input-area">
-      <textarea class="msg-input" id="msg-input" placeholder="Message client..." rows="1"
-        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px';document.getElementById('send-btn').disabled=!this.value.trim()"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
-      <button class="send-btn" id="send-btn" onclick="send()" disabled>➤</button>
-    </div>
-  </div>
-
-  <!-- PAGE FICHE -->
-  <div class="page" id="page-fiche">
-    <div class="scroll" id="fiche-content"></div>
-  </div>
-
-  <!-- PAGE STATS -->
-  <div class="page" id="page-stats">
-    <div class="scroll">
-      <div style="font-size:18px;font-weight:800;margin-bottom:14px">📊 Statistiques</div>
-      <div class="kpis">
-        <div class="kpi"><div class="kpi-val" style="color:#7c6af7" id="st-msgs">0</div><div class="kpi-lbl">Messages traités</div></div>
-        <div class="kpi"><div class="kpi-val" style="color:#22d3a5" id="st-rdv">0</div><div class="kpi-lbl">RDV demandés</div></div>
-        <div class="kpi"><div class="kpi-val" style="color:#f59e0b">98%</div><div class="kpi-lbl">Taux réponse</div></div>
-        <div class="kpi"><div class="kpi-val" style="color:#22d3a5">~10s</div><div class="kpi-lbl">Délai moyen</div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">🤖 IA connectée</div>
-        <div class="row"><span>Moteur</span><span class="row-val" id="ia-label">Mode démo</span></div>
-        <div class="row"><span>Clé API</span><span class="row-val" id="ia-key-status">Non configurée</span></div>
-        <div class="row"><span>Commerce</span><span class="row-val" id="ia-commerce">–</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PAGE RÉGLAGES -->
-  <div class="page" id="page-settings">
-    <div class="scroll">
-      <div style="font-size:18px;font-weight:800;margin-bottom:14px">⚙️ Réglages</div>
-
-      <div class="api-notice">
-        <strong>🔑 Pour activer l'IA réelle :</strong><br>
-        1. Allez sur <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a><br>
-        2. Cliquez "Get API Key" → "Create API Key"<br>
-        3. Copiez la clé et collez-la ci-dessous
-      </div>
-
-      <div class="card">
-        <div class="card-title">🤖 Clé API</div>
-        <label>Fournisseur IA</label>
-        <select id="s-provider">
-          <option value="demo">🎭 Mode démo (sans clé)</option>
-          <option value="gemini">✨ Gemini — Gratuit</option>
-          <option value="claude">🟣 Claude — Premium</option>
-        </select>
-        <label>Clé API</label>
-        <input type="password" id="s-apikey" placeholder="AIza... ou sk-ant-..."/>
-      </div>
-
-      <div class="card">
-        <div class="card-title">🏪 Mon commerce</div>
-        <label>Nom de l'établissement</label>
-        <input type="text" id="s-name" placeholder="Ex : Salon Éclat"/>
-        <label>Type de commerce</label>
-        <select id="s-type">
-          <option value="coiffeur">💇 Coiffeur / Salon</option>
-          <option value="restaurant">🍽️ Restaurant / Café</option>
-          <option value="dentiste">🦷 Dentiste / Médecin</option>
-          <option value="artisan">🔧 Artisan</option>
-          <option value="garage">🚗 Garage auto</option>
-          <option value="pharmacie">💊 Pharmacie</option>
-          <option value="kine">🏃 Kiné / Ostéo</option>
-          <option value="autre">🏪 Autre</option>
-        </select>
-        <label>Téléphone</label>
-        <input type="text" id="s-phone" placeholder="04 94 XX XX XX"/>
-        <label>Adresse</label>
-        <input type="text" id="s-addr" placeholder="12 rue de la Paix, Marseille"/>
-      </div>
-
-      <div class="card">
-        <div class="card-title">🕐 Horaires</div>
-        <label>Lundi – Vendredi</label>
-        <input type="text" id="s-semaine" placeholder="9h – 19h"/>
-        <label>Samedi</label>
-        <input type="text" id="s-sam" placeholder="9h – 13h"/>
-        <label>Dimanche</label>
-        <input type="text" id="s-dim" placeholder="Fermé"/>
-      </div>
-
-      <div class="card">
-        <div class="card-title">💰 Tarifs & Services</div>
-        <label>Entrez vos tarifs (un par ligne : Prestation — Prix)</label>
-        <textarea id="s-tarifs" placeholder="Coupe femme — 45€&#10;Coupe homme — 25€&#10;Coloration — 65€&#10;Brushing — 30€"></textarea>
-      </div>
-
-      <div class="card">
-        <div class="card-title">💬 Ton de l'agent</div>
-        <select id="s-tone">
-          <option value="professionnel">🎩 Professionnel</option>
-          <option value="chaleureux">😊 Chaleureux</option>
-          <option value="concis">⚡ Concis</option>
-          <option value="formel">📋 Formel</option>
-        </select>
-      </div>
-
-      <button class="btn" onclick="saveSettings()">💾 Enregistrer</button>
-      <div class="toast" id="toast">✓ Configuration sauvegardée !</div>
-      <div style="height:20px"></div>
-    </div>
-  </div>
-
-  <!-- TABS -->
-  <div class="tabs">
-    <button class="tab active" onclick="showPage('chat',this)">💬<br>Chat</button>
-    <button class="tab" onclick="showPage('fiche',this)">🏪<br>Fiche</button>
-    <button class="tab" onclick="showPage('stats',this)">📊<br>Stats</button>
-    <button class="tab" onclick="showPage('settings',this)">⚙️<br>Réglages</button>
-  </div>
+  <h2>🤖 Agent IA Pro</h2>
+  <div id="messages"></div>
+  <textarea id="msg"></textarea>
+  <button onclick="send()">Envoyer</button>
 </div>
 
 <script>
-// ── CONFIG ──
-var cfg = {
-  name: '', type: 'coiffeur', phone: '', addr: '',
-  semaine: '9h-19h', sam: '9h-13h', dim: 'Fermé',
-  tarifs: '', tone: 'professionnel',
-  provider: 'demo', apikey: ''
-};
-var chatHistory = [], ch = 'sms', msgCount = 0, rdvCount = 0;
+var cfg = { provider:"demo", apikey:"" };
+var messages = [];
 
-var ICONS = {coiffeur:'💇',restaurant:'🍽️',dentiste:'🦷',artisan:'🔧',garage:'🚗',pharmacie:'💊',kine:'🏃',autre:'🏪'};
-var LABELS = {coiffeur:'Coiffeur',restaurant:'Restaurant',dentiste:'Dentiste',artisan:'Artisan',garage:'Garage',pharmacie:'Pharmacie',kine:'Kiné',autre:'Commerce'};
-var PROMPTS = {
-  coiffeur:['Prendre un RDV coupe','Prix d\'une coloration ?','Horaires samedi ?','Annuler mon RDV'],
-  restaurant:['Réserver une table','Menu du jour ?','Terrasse disponible ?','Horaires du soir ?'],
-  dentiste:['Urgence dentaire','1ère consultation','Remboursement sécu ?','Modifier mon RDV'],
-  artisan:['Urgence fuite d\'eau','Demander un devis','Délai intervention ?','Panne électrique'],
-  garage:['Prendre RDV révision','Prix d\'une vidange ?','Voyant allumé','Contrôle technique'],
-  pharmacie:['Médicament disponible ?','Renouveler ordonnance','Vaccin grippe','Horaires dimanche ?'],
-  kine:['Prendre RDV séance','Remboursement ?','Douleur urgente','Annuler séance'],
-  autre:['Prendre RDV','Horaires ?','Tarifs ?','Nous contacter']
-};
-
-// ── LOAD / SAVE ──
-function load() {
-  try {
-    var s = localStorage.getItem('agentia_v2');
-    if (s) Object.assign(cfg, JSON.parse(s));
-  } catch(e) {}
-}
-function save() {
-  try { localStorage.setItem('agentia_v2', JSON.stringify(cfg)); } catch(e) {}
+function init(){
+  console.log("INIT OK");
 }
 
-// ── INIT ──
+function forceStart(){
+  console.log("FORCE START");
 
-function init() {
-  try {
-    load();
+  try { init(); } catch(e){ console.error(e); }
 
-    document.getElementById('biz-name').textContent = cfg.name || 'Mon Commerce';
-    document.getElementById('biz-type').textContent = (LABELS[cfg.type] || 'Commerce') + ' · Agent IA';
-    document.getElementById('biz-icon').textContent = ICONS[cfg.type] || '🏪';
-
-    renderPrompts();
-    renderFiche();
-    syncSettings();
-    updateStats();
-
-  } catch (e) {
-    console.error("Erreur INIT :", e);
-  }
-
-  // 🔥 IMPORTANT : toujours afficher l'app même en cas d'erreur
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-}
-// ── NAV ──
-function showPage(name, el) {
-  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
-  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
-  document.getElementById('page-' + name).classList.add('active');
-  el.classList.add('active');
-  if (name === 'fiche') renderFiche();
-  if (name === 'stats') updateStats();
-}
-function setCh(c, el) {
-  ch = c;
-  document.querySelectorAll('.ch-btn').forEach(function(b){ b.classList.remove('active'); });
-  el.classList.add('active');
+  setTimeout(()=>{
+    document.getElementById("loading").style.display="none";
+    document.getElementById("app").style.display="block";
+  },500);
 }
 
-// ── PROMPTS ──
-function renderPrompts() {
-  var ps = PROMPTS[cfg.type] || PROMPTS.autre;
-  document.getElementById('prompts').innerHTML = ps.map(function(p) {
-    return '<button class="prompt" onclick="usePrompt(\'' + p.replace(/'/g,"\\'") + '\')">' + p + '</button>';
-  }).join('');
-}
-function usePrompt(txt) {
-  document.getElementById('msg-input').value = txt;
-  document.getElementById('send-btn').disabled = false;
-  send();
+function addMsg(text){
+  var div = document.createElement("div");
+  div.innerHTML = text;
+  document.getElementById("messages").appendChild(div);
 }
 
-// ── CHAT ──
-function ts() {
-  var d = new Date();
-  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-}
-function addMsg(role, text) {
-  var msgs = document.getElementById('messages');
-  var d = document.createElement('div');
-  d.className = 'msg ' + role;
-  d.innerHTML = '<div class="bubble">' + text.replace(/\n/g,'<br>') + '</div><div class="mtime">' + (role==='user'?'Client':'Agent IA') + ' · ' + ts() + '</div>';
-  msgs.appendChild(d);
-  msgs.scrollTop = 99999;
-}
+async function send(){
+  var input = document.getElementById("msg");
+  var txt = input.value;
+  if(!txt) return;
 
-async function send() {
-  var inp = document.getElementById('msg-input');
-  var txt = inp.value.trim();
-  if (!txt) return;
-  inp.value = ''; inp.style.height = 'auto';
-  document.getElementById('send-btn').disabled = true;
-  addMsg('user', txt);
-  chatHistory.push({role:'user', content: txt});
-  msgCount++;
-  if (/rdv|réserv|rendez|table|book/i.test(txt)) rdvCount++;
+  addMsg("👤 "+txt);
+  input.value="";
 
-  var typing = document.getElementById('typing');
-  typing.classList.add('show');
-  document.getElementById('messages').appendChild(typing);
-  document.getElementById('messages').scrollTop = 99999;
+  addMsg("🤖 ...");
 
-  var reply = '';
-  if (cfg.provider === 'gemini' && cfg.apikey) {
-    reply = await callGemini(txt);
-  } else if (cfg.provider === 'claude' && cfg.apikey) {
-    reply = await callClaude(txt);
-  } else {
-    await new Promise(function(r){ setTimeout(r, 600 + Math.random()*500); });
-    reply = demoReply(txt);
-  }
+  let reply = "Réponse démo";
 
-  typing.classList.remove('show');
-  addMsg('agent', reply);
-  chatHistory.push({role:'assistant', content: reply});
-  if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
-  updateStats();
-}
-
-async function callGemini(txt) {
-  var sys = buildSystem();
-  var models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-  for (var i = 0; i < models.length; i++) {
-    try {
-      var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + cfg.apikey, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          system_instruction: {parts:[{text:sys}]},
-          contents: chatHistory.slice(-8).map(function(m){
-            return {role: m.role==='user'?'user':'model', parts:[{text:m.content}]};
-          }).concat([{role:'user',parts:[{text:txt}]}]),
-          generationConfig: {maxOutputTokens:300, temperature:0.7}
+  if(cfg.apikey){
+    try{
+      let r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+cfg.apikey,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          contents:[{parts:[{text:txt}]}]
         })
       });
-      var d = await r.json();
-      if (d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts[0]) {
-        return d.candidates[0].content.parts[0].text;
-      }
-    } catch(e) { console.warn('Gemini error:', e); }
-  }
-  return demoReply(txt);
-}
-
-async function callClaude(txt) {
-  var sys = buildSystem();
-  try {
-    var r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': cfg.apikey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
-        system: sys,
-        messages: chatHistory.slice(-8).concat([{role:'user',content:txt}])
-      })
-    });
-    var d = await r.json();
-    if (d && d.content && d.content[0]) return d.content[0].text;
-  } catch(e) { console.warn('Claude error:', e); }
-  return demoReply(txt);
-}
-
-function buildSystem() {
-  var tone = {professionnel:'professionnel et courtois',chaleureux:'chaleureux',concis:'concis et direct',formel:'formel'}[cfg.tone]||'professionnel';
-  return 'Tu es l\'assistant IA de ' + (cfg.name||'ce commerce') + ' (' + (LABELS[cfg.type]||'commerce') + ').\n'
-    + 'Canal : ' + (ch==='sms'?'SMS (court)':ch==='tel'?'téléphone':'chat web') + '.\n'
-    + 'Ton : ' + tone + '.\n'
-    + (cfg.phone ? 'Tél : ' + cfg.phone + '.\n' : '')
-    + (cfg.addr ? 'Adresse : ' + cfg.addr + '.\n' : '')
-    + 'Horaires : Lun-Ven ' + cfg.semaine + ', Sam ' + cfg.sam + ', Dim ' + cfg.dim + '.\n'
-    + (cfg.tarifs ? 'Tarifs : ' + cfg.tarifs.replace(/\n/g,', ') + '.\n' : '')
-    + 'Réponds en français. 2-4 phrases max pour SMS. Ne dis pas que tu es une IA sauf si demandé.';
-}
-
-function demoReply(txt) {
-  var t = txt.toLowerCase();
-  var n = cfg.name || 'notre établissement';
-  if (!cfg.apikey) {
-    if (/prix|tarif|combien|coût/i.test(t)) {
-      if (cfg.tarifs) return 'Voici nos tarifs : ' + cfg.tarifs.split('\n').slice(0,3).join(' | ') + '. Souhaitez-vous prendre rendez-vous ?';
-      return '⚠️ Mode démo : ajoutez une clé Gemini dans Réglages pour des réponses IA réelles. Nos tarifs seront disponibles une fois configurés.';
+      let d = await r.json();
+      reply = d.candidates?.[0]?.content?.parts?.[0]?.text || "Erreur IA";
+    }catch(e){
+      reply = "Erreur connexion IA";
     }
   }
-  if (/rdv|réserv|rendez|prendre|urgence|table|book/i.test(t))
-    return 'Bonjour ! Je peux vous proposer un créneau demain à 10h ou après-demain à 14h30 chez ' + n + '. Cela vous convient ?';
-  if (/horaire|ouvert|fermé|samedi|dimanche/i.test(t))
-    return n + ' est ouvert Lun-Ven ' + cfg.semaine + ', Samedi ' + cfg.sam + ', Dimanche ' + cfg.dim + '.';
-  if (/prix|tarif|combien|coût|menu/i.test(t)) {
-    if (cfg.tarifs) return 'Nos tarifs : ' + cfg.tarifs.split('\n').slice(0,3).join(' • ') + '. Souhaitez-vous un RDV ?';
-    return 'Pour connaître nos tarifs, configurez-les dans Réglages ou appelez-nous au ' + (cfg.phone||'notre numéro') + '.';
-  }
-  if (/annuler|annulation/i.test(t)) return 'Votre RDV est annulé. Souhaitez-vous le reporter ?';
-  if (/adresse|où|trouver/i.test(t)) return cfg.addr ? 'Vous nous trouvez au ' + cfg.addr + '.' : 'Appelez-nous pour l\'adresse.';
-  if (/merci|super|parfait/i.test(t)) return 'Merci à vous ! À bientôt chez ' + n + ' 😊';
-  return 'Bonjour ! Bienvenue chez ' + n + '. Comment puis-je vous aider ?';
+
+  addMsg("🤖 "+reply);
 }
-
-// ── FICHE ──
-function renderFiche() {
-  var now = new Date();
-  var days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-  var months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  var tarifsHtml = '';
-  if (cfg.tarifs) {
-    tarifsHtml = cfg.tarifs.split('\n').filter(function(l){return l.trim();}).map(function(l){
-      var parts = l.split('—');
-      if (parts.length < 2) parts = l.split('-');
-      var nom = parts[0] ? parts[0].trim() : l;
-      var prix = parts[1] ? parts[1].trim() : '';
-      return '<div class="row"><span>' + nom + '</span><span class="row-val">' + prix + '</span></div>';
-    }).join('');
-  }
-  document.getElementById('fiche-content').innerHTML =
-    '<div class="card">' +
-      '<div style="font-size:28px;margin-bottom:6px">' + (ICONS[cfg.type]||'🏪') + '</div>' +
-      '<div style="font-size:20px;font-weight:800;margin-bottom:4px">' + (cfg.name||'Mon Commerce') + '</div>' +
-      '<div style="font-size:13px;color:#8b949e;margin-bottom:12px">' + (LABELS[cfg.type]||'Commerce') + '</div>' +
-      (cfg.phone ? '<div class="row"><span>📞 Téléphone</span><span class="row-val">' + cfg.phone + '</span></div>' : '') +
-      (cfg.addr ? '<div class="row"><span>📍 Adresse</span><span class="row-val">' + cfg.addr + '</span></div>' : '') +
-    '</div>' +
-    '<div class="card">' +
-      '<div class="card-title">🕐 Horaires</div>' +
-      '<div class="row"><span>Lundi – Vendredi</span><span class="row-val">' + cfg.semaine + '</span></div>' +
-      '<div class="row"><span>Samedi</span><span class="row-val">' + cfg.sam + '</span></div>' +
-      '<div class="row"><span>Dimanche</span><span class="row-val" style="color:' + (cfg.dim==='Fermé'?'#8b949e':'#22d3a5') + '">' + cfg.dim + '</span></div>' +
-    '</div>' +
-    (cfg.tarifs ? '<div class="card"><div class="card-title">💰 Tarifs</div>' + tarifsHtml + '</div>' : '') +
-    '<div style="text-align:center;padding:14px;font-size:12px;color:#484f58">Touchez Réglages ⚙️ pour modifier ces informations</div>';
-}
-
-// ── SETTINGS ──
-function syncSettings() {
-  document.getElementById('s-name').value = cfg.name || '';
-  document.getElementById('s-type').value = cfg.type || 'coiffeur';
-  document.getElementById('s-phone').value = cfg.phone || '';
-  document.getElementById('s-addr').value = cfg.addr || '';
-  document.getElementById('s-semaine').value = cfg.semaine || '9h-19h';
-  document.getElementById('s-sam').value = cfg.sam || '9h-13h';
-  document.getElementById('s-dim').value = cfg.dim || 'Fermé';
-  document.getElementById('s-tarifs').value = cfg.tarifs || '';
-  document.getElementById('s-provider').value = cfg.provider || 'demo';
-  document.getElementById('s-apikey').value = cfg.apikey || '';
-  document.getElementById('s-tone').value = cfg.tone || 'professionnel';
-}
-function saveSettings() {
-  cfg.name = document.getElementById('s-name').value.trim();
-  cfg.type = document.getElementById('s-type').value;
-  cfg.phone = document.getElementById('s-phone').value.trim();
-  cfg.addr = document.getElementById('s-addr').value.trim();
-  cfg.semaine = document.getElementById('s-semaine').value.trim() || '9h-19h';
-  cfg.sam = document.getElementById('s-sam').value.trim() || '9h-13h';
-  cfg.dim = document.getElementById('s-dim').value.trim() || 'Fermé';
-  cfg.tarifs = document.getElementById('s-tarifs').value.trim();
-  cfg.provider = document.getElementById('s-provider').value;
-  cfg.apikey = document.getElementById('s-apikey').value.trim();
-  cfg.tone = document.getElementById('s-tone').value;
-  save();
-  document.getElementById('biz-name').textContent = cfg.name || 'Mon Commerce';
-  document.getElementById('biz-icon').textContent = ICONS[cfg.type] || '🏪';
-  document.getElementById('biz-type').textContent = (LABELS[cfg.type]||'Commerce') + ' · Agent IA';
-  renderPrompts(); renderFiche(); updateStats();
-  var t = document.getElementById('toast');
-  t.style.display = 'block';
-  setTimeout(function(){ t.style.display = 'none'; }, 2500);
-}
-
-// ── STATS ──
-function updateStats() {
-  document.getElementById('st-msgs').textContent = msgCount;
-  document.getElementById('st-rdv').textContent = rdvCount;
-  document.getElementById('ia-label').textContent = cfg.provider === 'gemini' ? '✨ Gemini (gratuit)' : cfg.provider === 'claude' ? '🟣 Claude (premium)' : '🎭 Mode démo';
-  document.getElementById('ia-key-status').textContent = cfg.apikey ? '✓ Configurée' : '⚠️ Manquante';
-  document.getElementById('ia-commerce').textContent = cfg.name || '–';
-}
-
-// ── DÉMARRAGE ──
-<script>
-
-// Vérifie que tout est bien chargé
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("✅ DOM chargé");
-
-  try {
-    init();
-    console.log("✅ INIT OK");
-  } catch (e) {
-    console.error("❌ Erreur INIT :", e);
-
-    // Sécurité : afficher quand même l'app
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
-  }
-});
 </script>
+
+</body>
+</html>
