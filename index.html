@@ -282,20 +282,28 @@ function save() {
 }
 
 // ── INIT ──
+
 function init() {
-  load();
-  document.getElementById('biz-name').textContent = cfg.name || 'Mon Commerce';
-  document.getElementById('biz-type').textContent = (LABELS[cfg.type] || 'Commerce') + ' · Agent IA';
-  document.getElementById('biz-icon').textContent = ICONS[cfg.type] || '🏪';
-  renderPrompts();
-  renderFiche();
-  syncSettings();
-  updateStats();
-  // Cacher le loader
+  try {
+    load();
+
+    document.getElementById('biz-name').textContent = cfg.name || 'Mon Commerce';
+    document.getElementById('biz-type').textContent = (LABELS[cfg.type] || 'Commerce') + ' · Agent IA';
+    document.getElementById('biz-icon').textContent = ICONS[cfg.type] || '🏪';
+
+    renderPrompts();
+    renderFiche();
+    syncSettings();
+    updateStats();
+
+  } catch (e) {
+    console.error("Erreur INIT :", e);
+  }
+
+  // 🔥 IMPORTANT : toujours afficher l'app même en cas d'erreur
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 }
-
 // ── NAV ──
 function showPage(name, el) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
